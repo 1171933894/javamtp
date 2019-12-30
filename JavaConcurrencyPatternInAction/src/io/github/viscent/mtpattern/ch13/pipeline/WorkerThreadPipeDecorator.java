@@ -25,13 +25,10 @@ import io.github.viscent.mtpattern.ch5.tpt.TerminationToken;
 /**
  * 基于工作者线程的Pipe实现类。 提交到该Pipe的任务由指定个数的工作者线程共同处理。 该类使用了Two-phase
  * Termination模式（参见第5章）。
- * 
- * @author Viscent Huang
  *
- * @param <IN>
- *            输入类型
- * @param <OUT>
- *            输出类型
+ * @param <IN>  输入类型
+ * @param <OUT> 输出类型
+ * @author Viscent Huang
  */
 public class WorkerThreadPipeDecorator<IN, OUT> implements Pipe<IN, OUT> {
     protected final BlockingQueue<IN> workQueue;
@@ -45,7 +42,7 @@ public class WorkerThreadPipeDecorator<IN, OUT> implements Pipe<IN, OUT> {
     }
 
     public WorkerThreadPipeDecorator(BlockingQueue<IN> workQueue,
-            Pipe<IN, OUT> delegate, int workerCount) {
+                                     Pipe<IN, OUT> delegate, int workerCount) {
         if (workerCount <= 0) {
             throw new IllegalArgumentException(
                     "workerCount should be positive!");
@@ -74,6 +71,11 @@ public class WorkerThreadPipeDecorator<IN, OUT> implements Pipe<IN, OUT> {
         delegate.process(input);
     }
 
+    /**
+     * 启动工作者线程，并调用委托pipe实例的init方法
+     *
+     * @param pipeCtx
+     */
     @Override
     public void init(PipeContext pipeCtx) {
         delegate.init(pipeCtx);
@@ -82,12 +84,24 @@ public class WorkerThreadPipeDecorator<IN, OUT> implements Pipe<IN, OUT> {
         }
     }
 
+    /**
+     * 接受前一个阶段的输入，并将其存入队列，由于工作者线程运行时取出进行处理
+     *
+     * @param input
+     * @throws InterruptedException
+     */
     @Override
     public void process(IN input) throws InterruptedException {
         workQueue.put(input);
         terminationToken.reservations.incrementAndGet();
     }
 
+    /**
+     * 停止工作者线程，并调用委托pipe实例的shutdown方法
+     *
+     * @param timeout
+     * @param unit
+     */
     @Override
     public void shutdown(long timeout, TimeUnit unit) {
         for (AbstractTerminatableThread thread : workerThreads) {
@@ -100,6 +114,11 @@ public class WorkerThreadPipeDecorator<IN, OUT> implements Pipe<IN, OUT> {
         delegate.shutdown(timeout, unit);
     }
 
+    /**
+     * 调用委托的Pipe实例的setNextPipe方法
+     *
+     * @param nextPipe
+     */
     @Override
     public void setNextPipe(Pipe<?, ?> nextPipe) {
         delegate.setNextPipe(nextPipe);
